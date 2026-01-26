@@ -18,6 +18,7 @@ func Run() {
 
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	apiCfg.platform = os.Getenv("PLATFORM")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		return
@@ -36,7 +37,7 @@ func Run() {
 	})
 
 	serverMux.HandleFunc("POST /api/validate_chirp", func(w http.ResponseWriter, r *http.Request) {
-		
+
 		type parameters struct {
 			Body string `json:"body"`
 		}
@@ -47,6 +48,7 @@ func Run() {
 		if err != nil {
 			log.Printf("Error decoding parameters: %s", err)
 			w.WriteHeader(500)
+			w.Write([]byte(""))
 			return
 		}
 
@@ -60,53 +62,109 @@ func Run() {
 		}
 		chirp = cleanChirp(chirp)
 
-		respondWithJSON(w, 200, struct{CleanedBody string `json:"cleaned_body"`}{CleanedBody:chirp})
+		respondWithJSON(w, 200, struct {
+			CleanedBody string `json:"cleaned_body"`
+		}{CleanedBody: chirp})
 	})
 
 	serverMux.HandleFunc("GET /admin/metrics", apiCfg.showMetricsHandler)
-	serverMux.HandleFunc("POST /admin/reset", apiCfg.resetMetricsHandler)
+	serverMux.HandleFunc("POST /admin/reset", func(w http.ResponseWriter, r *http.Request) {
+		if apiCfg.platform != "dev" {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Forbidden\n"))
+			return
+		}
+		
+		err := apiCfg.db.DeleteAllUsers(r.Context())
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Failed to delete all users\n"))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Reset all users\n"))
+	})
+
+	serverMux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+
+		type parameters struct {
+			Email string `json:"email"`
+		}
+
+		decoder := json.NewDecoder(r.Body)
+		params := parameters{}
+		err := decoder.Decode(&params)
+		if err != nil {
+			log.Printf("Error decoding parameters: %s", err)
+			w.WriteHeader(500)
+			w.Write([]byte(""))
+			return
+		}
+
+		// Create user
+		usr, err := apiCfg.db.CreateUser(r.Context(), params.Email)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		respondWithJSON(w, http.StatusCreated, struct {
+			Id         string `json:"id"`
+			Created_at string `json:"created_at"`
+			Updated_at string `json:"updated_at"`
+			Email      string `json:"email"`
+		}{
+			Id:         usr.ID.String(),
+			Created_at: usr.CreatedAt.String(),
+			Updated_at: usr.UpdatedAt.String(),
+			Email:      usr.Email,
+		})
+	})
 
 	server := http.Server{
 		Handler: serverMux,
-		Addr: ":8080",
+		Addr:    ":8080",
 	}
 
 	server.ListenAndServe()
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
-		dat, err := json.Marshal(struct{Error string `json:"error"`}{Error: msg})
-		if err != nil {
-				log.Printf("Error marshalling JSON: %s", err)
-				w.WriteHeader(500)
-				return
-		}
+	dat, err := json.Marshal(struct {
+		Error string `json:"error"`
+	}{Error: msg})
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		return
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(code)
-		w.Write(dat)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(dat)
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-		
-		dat, err := json.Marshal(payload)
-		if err != nil {
-				log.Printf("Error marshalling JSON: %s", err)
-				w.WriteHeader(500)
-				return
-		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(code)
-		w.Write(dat)
+	dat, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(dat)
 }
 
 func cleanChirp(input string) string {
 	badWords := [3]string{"kerfuffle", "sharbert", "fornax"}
 
 	words := strings.Split(input, " ")
-	for index, w := range(words) {
-		for _, b := range(badWords) {
+	for index, w := range words {
+		for _, b := range badWords {
 			if strings.ToLower(w) == b {
 				words[index] = "****"
 				break
