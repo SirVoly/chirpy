@@ -7,6 +7,8 @@ This project was build with the intention of hands-on practice in GO, HTTP Serve
 ## Technologies Used
 
 *   **GO**: The primary programming language.
+*   **PSQL**: The primary database.
+*   **Goose**: A database migration tool written in Go
 
 ## Setup
 
@@ -14,6 +16,20 @@ To run this project, follow these steps:
 
     Copy the repo on your pc
     Install [GO](https://go.dev/doc/install)
+        webi go@1.25.4
+    Install PostGres:
+        sudo apt install postgresql postgresql-contrib
+
+    Setup Database:
+        sudo service postgresql start
+        su postgres
+        psql
+        CREATE DATABASE chirpy;
+        \c chirpy
+    
+    Install Goose:
+        go install github.com/pressly/goose/v3/cmd/goose@latest
+        cd sql/schema && goose postgres postgres://postgres:postgres@localhost:5432/chirpy up && cd ../..
 
 
 ## Usage

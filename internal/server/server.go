@@ -1,15 +1,30 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
+	"github/SirVoly/chirpy/internal/database"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func Run() {
-	serverMux := http.NewServeMux()
 	apiCfg := apiConfig{}
+
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		return
+	}
+	apiCfg.db = database.New(db)
+
+	serverMux := http.NewServeMux()
 
 	// A link with the suffix /app/ will be redirected to this handler, which in turn will remove the /app/ prefix, so the FileServer can interpret this in the same way as the files.
 	serverMux.Handle("/app/", apiCfg.middlewareMetricsInc(middlewareLog(http.StripPrefix("/app/", http.FileServer(http.Dir("."))))))
