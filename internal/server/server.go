@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -23,6 +24,7 @@ func Run() {
 	if err != nil {
 		return
 	}
+	
 	apiCfg.db = database.New(db)
 
 	serverMux := http.NewServeMux()
@@ -36,10 +38,29 @@ func Run() {
 		w.Write([]byte("OK"))
 	})
 
-	serverMux.HandleFunc("POST /api/validate_chirp", func(w http.ResponseWriter, r *http.Request) {
+	serverMux.HandleFunc("GET /api/chirps", func(w http.ResponseWriter, r *http.Request) {
+		chirps, err := apiCfg.db.ListChirps(r.Context())
+		if err != nil {
+			log.Printf("Error getting chirps: %s", err)
+			w.WriteHeader(500)
+			w.Write([]byte("Internal Server Error"))
+			return
+		}
+
+		listChirps := make([]JSON_Chirp, 0)
+
+		for _, c := range chirps {
+			listChirps = append(listChirps, createJSONChirp(c))
+		}
+
+		respondWithJSON(w, http.StatusOK, listChirps)
+	})
+
+	serverMux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
 
 		type parameters struct {
-			Body string `json:"body"`
+			Body   string `json:"body"`
+			UserID string `json:"user_id"`
 		}
 
 		decoder := json.NewDecoder(r.Body)
@@ -48,23 +69,33 @@ func Run() {
 		if err != nil {
 			log.Printf("Error decoding parameters: %s", err)
 			w.WriteHeader(500)
-			w.Write([]byte(""))
+			w.Write([]byte("Internal Server Error"))
 			return
 		}
+		user_id := uuid.MustParse(params.UserID)
 
-		chirp := params.Body
+		msg := params.Body
 
-		// Check if the message is <=140
-		valid := len(chirp) <= 140
+		// Validate Chirp
+		valid := len(msg) <= 140
 		if !valid {
 			respondWithError(w, 400, "Chirp is too long")
 			return
 		}
-		chirp = cleanChirp(chirp)
+		msg = cleanChirp(msg)
 
-		respondWithJSON(w, 200, struct {
-			CleanedBody string `json:"cleaned_body"`
-		}{CleanedBody: chirp})
+		// Upload Chirp
+		chirp, err := apiCfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
+			Body:   msg,
+			UserID: user_id,
+		})
+
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		respondWithJSON(w, http.StatusCreated, createJSONChirp(chirp))
 	})
 
 	serverMux.HandleFunc("GET /admin/metrics", apiCfg.showMetricsHandler)
@@ -74,7 +105,7 @@ func Run() {
 			w.Write([]byte("Forbidden\n"))
 			return
 		}
-		
+
 		err := apiCfg.db.DeleteAllUsers(r.Context())
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -85,6 +116,22 @@ func Run() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Reset all users\n"))
 	})
+
+	serverMux.HandleFunc("GET /api/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
+
+		chirp_id := r.PathValue("chirpID")
+
+		// Get Chirp
+		chirp, err := apiCfg.db.GetChirpFromID(r.Context(), uuid.MustParse(chirp_id))
+		
+		if err != nil {
+			respondWithError(w, 404, "Chirp not found")
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, createJSONChirp(chirp))
+	})
+
 
 	serverMux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
 
@@ -109,17 +156,7 @@ func Run() {
 			return
 		}
 
-		respondWithJSON(w, http.StatusCreated, struct {
-			Id         string `json:"id"`
-			Created_at string `json:"created_at"`
-			Updated_at string `json:"updated_at"`
-			Email      string `json:"email"`
-		}{
-			Id:         usr.ID.String(),
-			Created_at: usr.CreatedAt.String(),
-			Updated_at: usr.UpdatedAt.String(),
-			Email:      usr.Email,
-		})
+		respondWithJSON(w, http.StatusCreated, createJSONUser(usr))
 	})
 
 	server := http.Server{
