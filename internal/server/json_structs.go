@@ -20,6 +20,7 @@ func createJSONChirp(db_chirp database.Chirp) JSON_Chirp {
 	}
 }
 
+// No passwords passed here!
 type JSON_User struct {
 	Id         string `json:"id"`
 	Created_at string `json:"created_at"`

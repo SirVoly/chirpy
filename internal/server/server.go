@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github/SirVoly/chirpy/internal/database"
+	"github/SirVoly/chirpy/internal/auth"
 	"log"
 	"net/http"
 	"os"
@@ -132,25 +133,72 @@ func Run() {
 		respondWithJSON(w, http.StatusOK, createJSONChirp(chirp))
 	})
 
-
-	serverMux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+	serverMux.HandleFunc("POST /api/login", func(w http.ResponseWriter, r *http.Request) {
 
 		type parameters struct {
 			Email string `json:"email"`
+			Password string `json:"password"`
 		}
 
 		decoder := json.NewDecoder(r.Body)
 		params := parameters{}
 		err := decoder.Decode(&params)
 		if err != nil {
-			log.Printf("Error decoding parameters: %s", err)
+			log.Printf("Error decoding parameters: %v", err)
+			w.WriteHeader(500)
+			w.Write([]byte(""))
+			return
+		}
+
+		//Get User
+		usr, err := apiCfg.db.GetUser(r.Context(), params.Email)
+		if err != nil {
+			w.WriteHeader(401)
+			w.Write([]byte("Incorrect email or password"))
+			return
+		}
+
+		correctPassword, err := auth.CheckPasswordHash(params.Password, usr.HashedPassword)
+		if err != nil || !correctPassword {
+			w.WriteHeader(401)
+			w.Write([]byte("Incorrect email or password"))
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, createJSONUser(usr))
+	})
+
+
+	serverMux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+
+		type parameters struct {
+			Email string `json:"email"`
+			Password string `json:"password"`
+		}
+
+		decoder := json.NewDecoder(r.Body)
+		params := parameters{}
+		err := decoder.Decode(&params)
+		if err != nil {
+			log.Printf("Error decoding parameters: %v", err)
+			w.WriteHeader(500)
+			w.Write([]byte(""))
+			return
+		}
+		
+		hash, err := auth.HashPassword(params.Password)
+		if err != nil {
+			log.Printf("Error hashing password: %v", err)
 			w.WriteHeader(500)
 			w.Write([]byte(""))
 			return
 		}
 
 		// Create user
-		usr, err := apiCfg.db.CreateUser(r.Context(), params.Email)
+		usr, err := apiCfg.db.CreateUser(r.Context(), database.CreateUserParams{
+			Email: params.Email,
+			HashedPassword: hash,
+		})
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
