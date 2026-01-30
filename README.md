@@ -1,4 +1,4 @@
-# Gator 
+# Chirp 
 
 An RSS feed aggregator in Go, called "Gator"
 
@@ -31,9 +31,19 @@ To run this project, follow these steps:
         go install github.com/pressly/goose/v3/cmd/goose@latest
         cd sql/schema && goose postgres postgres://postgres:postgres@localhost:5432/chirpy up && cd ../..
 
+    Setup your environment file:
+        .env file in the root of the project
+        DB_URL= Your database string
+        PLATFORM= What you use it for, example: user
+        JWTSECRET= A long random secret for your tokens
+        POLKA_KEY= A key to verify when a request comes from Polka
 
 ## Usage
 
+This server application is build to let people post their chirps.
+Most of the interactions are mainly supported from an API standpoint, not a browser standpoint.
+
+All endpoints can be found in server.go, with their method and needs.
 
 # Credit
 This project was completed as part of a guided course on [Boot.dev](https://www.boot.dev).
