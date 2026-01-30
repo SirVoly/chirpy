@@ -30,7 +30,6 @@ func Run() {
 		log.Fatal("JWTSECRET must be set")
 	}
 
-
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening database %s", err)
@@ -42,7 +41,7 @@ func Run() {
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 		platform:       platform,
-		JWTsecret:			secret,
+		JWTsecret:      secret,
 	}
 
 	serverMux := http.NewServeMux()
@@ -54,15 +53,18 @@ func Run() {
 	serverMux.HandleFunc("GET /admin/metrics", apiCfg.showMetricsHandler)
 
 	serverMux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
+	serverMux.HandleFunc("PUT /api/users", apiCfg.handlerUsersUpdate)
+
 	serverMux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
+	serverMux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
+	serverMux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
 
 	serverMux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
 	serverMux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsRetrieveAll)
 	serverMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGet)
+	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerChirpDelete)
 
 	serverMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
-
-
 
 	server := http.Server{
 		Handler: serverMux,

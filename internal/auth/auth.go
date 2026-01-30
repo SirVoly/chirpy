@@ -1,11 +1,17 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alexedwards/argon2id"
+	"github.com/google/uuid"
 )
 
 // Hash the password using the argon2id.CreateHash
@@ -17,7 +23,7 @@ func HashPassword(password string) (string, error) {
 	}
 
 	return hash, nil
-} 
+}
 
 // Use the argon2id.ComparePasswordAndHash function to compare the password that the user entered in the HTTP request with the password that is stored in the database.
 func CheckPasswordHash(password, hash string) (bool, error) {
@@ -36,4 +42,19 @@ func GetBearerToken(headers http.Header) (string, error) {
 
 	tokenString := strings.TrimPrefix(fullString, "Bearer ")
 	return tokenString, nil
+}
+
+func MakeRefreshToken() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func MakeToken(user_ID uuid.UUID, JWTSecret string, durInSeconds int) (string, error) {
+	dur, _ := time.ParseDuration(fmt.Sprintf("%s%s", strconv.Itoa(durInSeconds), "s"))
+
+	return MakeJWT(user_ID, JWTSecret, dur)
 }

@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"github/SirVoly/chirpy/internal/auth"
 	"github/SirVoly/chirpy/internal/database"
 	"net/http"
 	"strings"
@@ -25,15 +24,9 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 
 	// Authentication
 
-	token, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
-		return
-	}
+	user_id, authorized := cfg.authenticate(r.Header)
 
-	user_id, err := auth.ValidateJWT(token, cfg.JWTsecret)
-
-	if (err != nil) {
+	if !authorized {
 		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
 		return
 	}

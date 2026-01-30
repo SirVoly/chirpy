@@ -18,3 +18,8 @@ DELETE FROM users;
 -- name: ListUsers :many
 SELECT * FROM users
 ORDER BY email;
+
+-- name: UpdateUser :exec
+UPDATE users
+SET email = $2, hashed_password = $3, updated_at = NOW()
+WHERE id = $1;
