@@ -7,6 +7,7 @@ import (
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
-	db             *database.Queries
-	platform       string
+	db             		*database.Queries
+	platform       		string
+	JWTsecret			string
 }

@@ -25,6 +25,10 @@ func Run() {
 	if platform == "" {
 		log.Fatal("PLATFORM must be set")
 	}
+	secret := os.Getenv("JWTSECRET")
+	if secret == "" {
+		log.Fatal("JWTSECRET must be set")
+	}
 
 
 	db, err := sql.Open("postgres", dbURL)
@@ -38,6 +42,7 @@ func Run() {
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 		platform:       platform,
+		JWTsecret:			secret,
 	}
 
 	serverMux := http.NewServeMux()

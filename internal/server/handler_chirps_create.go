@@ -2,11 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"github/SirVoly/chirpy/internal/auth"
 	"github/SirVoly/chirpy/internal/database"
 	"net/http"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 // POST /api/chirps
@@ -14,7 +13,6 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 
 	type parameters struct {
 		Body   string `json:"body"`
-		UserID string `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -24,7 +22,21 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusInternalServerError, "Error decoding parameters", err)
 		return
 	}
-	user_id := uuid.MustParse(params.UserID)
+
+	// Authentication
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		return
+	}
+
+	user_id, err := auth.ValidateJWT(token, cfg.JWTsecret)
+
+	if (err != nil) {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		return
+	}
 
 	msg := params.Body
 

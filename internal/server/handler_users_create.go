@@ -40,5 +40,5 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, createJSONUser(usr))
+	respondWithJSON(w, http.StatusCreated, createJSONUser(usr, ""))
 }

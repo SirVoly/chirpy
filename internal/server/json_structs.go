@@ -26,13 +26,15 @@ type JSON_User struct {
 	Created_at string `json:"created_at"`
 	Updated_at string `json:"updated_at"`
 	Email      string `json:"email"`
+	Token      string `json:"token"`
 }
 
-func createJSONUser(db_user database.User) JSON_User {
+func createJSONUser(db_user database.User, token string) JSON_User {
 	return JSON_User{
 		Id:         db_user.ID.String(),
 		Created_at: db_user.CreatedAt.String(),
 		Updated_at: db_user.UpdatedAt.String(),
 		Email:      db_user.Email,
+		Token:		token,
 	}
 }
