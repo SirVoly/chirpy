@@ -22,18 +22,20 @@ func createJSONChirp(db_chirp database.Chirp) JSON_Chirp {
 
 // No passwords passed here!
 type JSON_User struct {
-	Id         string `json:"id"`
-	Created_at string `json:"created_at"`
-	Updated_at string `json:"updated_at"`
-	Email      string `json:"email"`
+	Id         		string `json:"id"`
+	Created_at 		string `json:"created_at"`
+	Updated_at 		string `json:"updated_at"`
+	Email      		string `json:"email"`
+	Is_Chirpy_Red 	bool   `json:"is_chirpy_red"`
 }
 
 func createJSONUser(db_user database.User) JSON_User {
 	return JSON_User{
-		Id:         db_user.ID.String(),
-		Created_at: db_user.CreatedAt.String(),
-		Updated_at: db_user.UpdatedAt.String(),
-		Email:      db_user.Email,
+		Id:         	db_user.ID.String(),
+		Created_at: 	db_user.CreatedAt.String(),
+		Updated_at: 	db_user.UpdatedAt.String(),
+		Email:      	db_user.Email,
+		Is_Chirpy_Red: 	db_user.IsChirpyRed,
 	}
 }
 
@@ -43,6 +45,7 @@ type JSON_LoginUser struct {
 	Created_at string `json:"created_at"`
 	Updated_at string `json:"updated_at"`
 	Email      string `json:"email"`
+	Is_Chirpy_Red 	bool   `json:"is_chirpy_red"`
 	Token      string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
 }
@@ -53,6 +56,7 @@ func createJSONLoginUser(db_user database.User, token string, refreshToken strin
 		Created_at: 		db_user.CreatedAt.String(),
 		Updated_at: 		db_user.UpdatedAt.String(),
 		Email:      		db_user.Email,
+		Is_Chirpy_Red: 	db_user.IsChirpyRed,
 		Token:				token,
 		RefreshToken:		refreshToken,
 	}

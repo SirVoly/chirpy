@@ -30,20 +30,6 @@ func CheckPasswordHash(password, hash string) (bool, error) {
 	return argon2id.ComparePasswordAndHash(password, hash)
 }
 
-func GetBearerToken(headers http.Header) (string, error) {
-	fullString := headers.Get("Authorization")
-	if fullString == "" {
-		return "", errors.New("Authorization Header missing")
-	}
-
-	if !strings.HasPrefix(fullString, "Bearer ") {
-		return "", errors.New("Invalid Authorization Header")
-	}
-
-	tokenString := strings.TrimPrefix(fullString, "Bearer ")
-	return tokenString, nil
-}
-
 func MakeRefreshToken() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
@@ -57,4 +43,26 @@ func MakeToken(user_ID uuid.UUID, JWTSecret string, durInSeconds int) (string, e
 	dur, _ := time.ParseDuration(fmt.Sprintf("%s%s", strconv.Itoa(durInSeconds), "s"))
 
 	return MakeJWT(user_ID, JWTSecret, dur)
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	return getAuthHeader(headers, "Bearer ")
+}
+
+func GetAPIKey(headers http.Header) (string, error) {
+	return getAuthHeader(headers, "ApiKey ")
+}
+
+func getAuthHeader(headers http.Header, key string) (string, error) {
+	fullString := headers.Get("Authorization")
+	if fullString == "" {
+		return "", errors.New("Authorization Header missing")
+	}
+
+	if !strings.HasPrefix(fullString, key) {
+		return "", errors.New("Invalid Authorization Header")
+	}
+
+	tokenString := strings.TrimPrefix(fullString, key)
+	return tokenString, nil
 }

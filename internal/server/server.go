@@ -29,6 +29,10 @@ func Run() {
 	if secret == "" {
 		log.Fatal("JWTSECRET must be set")
 	}
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY must be set")
+	}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -42,6 +46,7 @@ func Run() {
 		db:             dbQueries,
 		platform:       platform,
 		JWTsecret:      secret,
+		PolkaKey: 		polkaKey,
 	}
 
 	serverMux := http.NewServeMux()
@@ -65,6 +70,8 @@ func Run() {
 	serverMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerChirpDelete)
 
 	serverMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
+
+	serverMux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerPolkaWebhooks)
 
 	server := http.Server{
 		Handler: serverMux,

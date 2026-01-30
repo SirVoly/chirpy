@@ -10,4 +10,5 @@ type apiConfig struct {
 	db             		*database.Queries
 	platform       		string
 	JWTsecret			string
+	PolkaKey			string
 }
